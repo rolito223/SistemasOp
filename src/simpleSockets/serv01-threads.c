@@ -11,10 +11,39 @@
 # include <string.h>
 # include <signal.h>
 # include <sys/wait.h>
-
+# include <pthread.h>
 
 // void hand_sigchld(int);
 void hand_sigarlm(int);
+void thread(void *arg);
+
+
+
+void funhilo(buffer){
+	do{
+		char buffer[1024];
+		memset(buffer,1024,'\n');
+		int byrecv = recv(sockCli, buffer, 1024, 0);
+		buffer[byrecv] = '\n';
+		printf("Mensaje recibido: %s\n", buffer);
+		int  oldfd = dup(1);
+		dup2(sockCli, 1);
+		system(buffer);
+		dup2(oldfd,1);
+		close(oldfd);
+		
+		// system(buffer);
+		
+		char mensajeSend[1024] = "Hola cliente";
+		memset(buffer,1024,'\n');
+		strcpy(mensajeSend,"MensajeEnviado");
+		int bysend = send(sockCli, mensajeSend, strlen(mensajeSend), 0);
+		printf("Mensaje enviado: %s\n", mensajeSend);
+		
+		// byrecv = recv(sockCli, buffer, 1024, 0);
+		// buffer[byrecv] = '\n';
+	}while (strncmp(buffer,"fin",3));
+}
 
 int main(int argc, char * argv []){
 	
@@ -50,35 +79,10 @@ int main(int argc, char * argv []){
 		int sockCli = accept(sockSer, (struct sockaddr *)&mistruc, &longsockaddresin);
 		if (sockCli != -1)
 		{
-			pid_t pid = fork();
-			if (pid == 0)
-			{
-				char buffer[1024];
-				do{
-					memset(buffer,1024,'\n');
-					int byrecv = recv(sockCli, buffer, 1024, 0);
-					buffer[byrecv] = '\n';
-					printf("Mensaje recibido: %s\n", buffer);
-					int  oldfd = dup(1);
-					dup2(sockCli, 1);
-					system(buffer);
-					dup2(oldfd,1);
-					close(oldfd);
-					
-					system(buffer);
-					
-					char mensajeSend[1024] = "Hola cliente";
-					memset(buffer,1024,'\n');
-					strcpy(mensajeSend,"MensajeEnviado OK");
-					int bysend = send(sockCli, mensajeSend, strlen(mensajeSend), 0);
-					printf("Mensaje enviado: %s\n", mensajeSend);
-					
-					// byrecv = recv(sockCli, buffer, 1024, 0);
-					// buffer[byrecv] = '\n';
-				}while (strncmp(buffer,"fin",3));
-			}
-			close(sockCli);
-			exit(0);
+			pthread_t h1 = pthread_create(&h1, NULL, thread, sockCli);
+			
+			
+			funhilo();
 		}
 		else{
 			printf("Error al conectar\n");
